@@ -2,14 +2,24 @@
 #include <stdio.h>
 #define MAP_X 22//マップの横幅
 #define MAP_Y 13//マップの縦幅
+enum {
+STATE_TITLE,
+STATE_MAIN,
+STATE_END
+};
 void init();
+int title();
+int gamemain();
+int gameend();
 void fileread();
 void paint();
-
+int btnX, btnY;
+int btnWidth, btnHeight;
 int floorBlock;
 int floorBlock2;
 int i, j;
-
+int x, y;
+int gameState;
 int stageNum;//現在何ステージ目か
 int newClick, oldClick;
 int map[MAP_Y][MAP_X];//マップチップ
@@ -18,8 +28,40 @@ void init() {
 	floorBlock = DxLib::LoadGraph("dlmap/angurasakaba.png");
 	floorBlock2 = DerivationGraph(0, 128, 16, 16, floorBlock);
 	stageNum = 1;
+	gameState = 0;
+	btnX = 500;
+	btnY = 600;
+	btnWidth = 240;
+	btnHeight = 100;
 }
-
+int title() {
+	DrawBox(btnX, btnY, btnX + btnWidth, btnY + btnHeight,GetColor(255,255,255),TRUE);
+	newClick = (GetMouseInput() & MOUSE_INPUT_LEFT);
+	if (oldClick == 0 && newClick == 1) {
+		GetMousePoint(&x, &y);
+		oldClick = newClick;//押している状態へ
+		if (x > btnX && x < btnX + btnWidth && y < btnY + btnHeight && y > btnY) {
+			return STATE_MAIN;//スタートボタンが押されたらゲームへ
+		}
+	}
+	return STATE_TITLE;
+}
+int gamemain() {
+	paint();
+	return STATE_MAIN;
+}
+int gameend() {
+	DrawBox(btnX, btnY, btnX + btnWidth, btnY + btnHeight, GetColor(255, 255, 255), TRUE);
+	newClick = (GetMouseInput() & MOUSE_INPUT_LEFT);
+	if (oldClick == 0 && newClick == 1) {
+		GetMousePoint(&x, &y);
+		oldClick = newClick;//押している状態へ
+		if (x > btnX && x < btnX + btnWidth && y < btnY + btnHeight && y > btnY) {
+			return STATE_TITLE;//スタートボタンが押されたらゲームへ
+		}
+	}
+	return STATE_END;
+}
 void fileread() {
 	FILE *fp;
 	bool eofFlag = false;
@@ -90,14 +132,18 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		return -1;			// エラーが起きたら直ちに終了
 	}
+	SetDrawScreen(DX_SCREEN_BACK);
 	init();
 	fileread();
-	SetDrawScreen(DX_SCREEN_BACK);
+	
 	while (ProcessMessage() == 0)
 	{
 		ClearDrawScreen();//裏画面消す
-		SetDrawScreen(DX_SCREEN_BACK);//描画先を裏画面に
-
+		switch (gameState) {
+		case STATE_TITLE:gameState = title(); break;
+		case STATE_MAIN:gameState = gamemain(); break;
+		case STATE_END:gameState = gameend(); break;
+		}
 		newClick = (GetMouseInput() & MOUSE_INPUT_LEFT);
 		if (oldClick == 0 && newClick == 1) {
 		stageNum++;
@@ -107,10 +153,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		else if (oldClick == 1 && newClick == 0) {//マウスが離れたら押していない
 		oldClick = 0;
 		}
-		paint();
 		ScreenFlip();//裏画面を表画面にコピー
 	}
-
+	InitGraph();
 	DxLib_End();				// ＤＸライブラリ使用の終了処理
 
 	return 0;				// ソフトの終了 
